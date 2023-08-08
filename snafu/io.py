@@ -73,28 +73,25 @@ def load_network(fh,cols=(0,1),header=False,filters={},undirected=True,sparse=Fa
     idx=0
     bigdict={}
 
+    filterrows={}
     if header:
         headerrow=fh.readline().split('\n')[0].split(',')
         cols=(headerrow.index(cols[0]),headerrow.index(cols[1]))
-        filterrows={}
         for i in list(filters.keys()):
             filterrows[headerrow.index(i)]=filters[i]
-    else:
-        filterrows={}
-
-    done=dict()
+    done = {}
     for line in fh:
         line=line.rstrip()
         linesplit=line.split(',')
         twoitems=[linesplit[cols[0]],linesplit[cols[1]]]
-       
+
         skiprow=0
         for i in filterrows:
             if linesplit[i]!=filterrows[i]:
                 skiprow=1
         if skiprow==1:
             continue
-        
+
         try:
             if twoitems[1] not in bigdict[twoitems[0]]:
                 bigdict[twoitems[0]].append(twoitems[1])
@@ -104,10 +101,10 @@ def load_network(fh,cols=(0,1),header=False,filters={},undirected=True,sparse=Fa
             bigdict[twoitems[1]] = []
 
 
-    
+
     items_rev = dict(list(zip(list(bigdict.keys()),list(range(len(list(bigdict.keys())))))))
     items = dict(list(zip(list(range(len(list(bigdict.keys())))),list(bigdict.keys()))))
-    
+
     if sparse:
         from scipy.sparse import csr_matrix
         rows=[]
@@ -128,7 +125,7 @@ def load_network(fh,cols=(0,1),header=False,filters={},undirected=True,sparse=Fa
         graph = csr_matrix((data, (rows, cols)), shape=(len(items),len(items)))
     else:
         graph = np.zeros((len(items),len(items)))
-        
+
         for item1 in bigdict:
             for item2 in bigdict[item1]:
                 idx1=items_rev[item1]
@@ -170,7 +167,7 @@ def load_fluency_data(filepath,category=None,removePerseverations=False,removeIn
     subj_col = headers.index('id')
     listnum_col = headers.index('listnum')
     item_col = headers.index('item')
-    
+
     # check for optional columns
     try:
         category_col = headers.index('category')
@@ -190,15 +187,15 @@ def load_fluency_data(filepath,category=None,removePerseverations=False,removeIn
     except:
         has_rt_col = False
 
-    Xs=dict()
-    irts=dict()
-    items=dict()
-    spellingdict=dict()
-    spell_corrected = dict()
-    perseverations = dict()
-    intrusions = dict()
+    Xs = {}
+    irts = {}
+    items = {}
+    spellingdict = {}
+    spell_corrected = {}
+    perseverations = {}
+    intrusions = {}
     validitems=[]
-    
+
     # read in list of valid items when removeIntrusions = True
     if removeIntrusions:
         if (not scheme) and (not targetletter):
@@ -222,7 +219,7 @@ def load_fluency_data(filepath,category=None,removePerseverations=False,removeIn
                     spellingdict[incorrect] = correct
                 except:
                     pass    # fail silently on wrong format
-   
+
     with open(filepath,'rt', encoding='utf-8-sig') as f:
         f.readline()    # discard header row
         for line in f:
@@ -236,20 +233,20 @@ def load_fluency_data(filepath,category=None,removePerseverations=False,removeIn
                 storerow = False
             if (category != None) and (row[category_col] not in category):
                 storerow = False
-            
-            if storerow == True:
+
+            if storerow:
 
                 idx = row[subj_col]
                 listnum_int = int(row[listnum_col])
-                
+
                 # make sure dict keys exist
                 if idx not in Xs:
-                    Xs[idx] = dict()
-                    spell_corrected[idx] = dict()
-                    perseverations[idx] = dict()
-                    intrusions[idx] = dict()
+                    Xs[idx] = {}
+                    spell_corrected[idx] = {}
+                    perseverations[idx] = {}
+                    intrusions[idx] = {}
                     if has_rt_col:
-                        irts[idx] = dict()
+                        irts[idx] = {}
                 if listnum_int not in Xs[idx]:
                     Xs[idx][listnum_int] = []
                     spell_corrected[idx][listnum_int] = []
@@ -258,15 +255,12 @@ def load_fluency_data(filepath,category=None,removePerseverations=False,removeIn
                     if has_rt_col:
                         irts[idx][listnum_int] = []
                 if idx not in items:
-                    items[idx] = dict()
-                    
+                    items[idx] = {}
+
                 # basic clean-up
                 item=row[item_col].lower()
                 if removeNonAlphaChars:
-                    goodchars = []
-                    for char in item:
-                        if char.isalpha():
-                            goodchars.append(char)
+                    goodchars = [char for char in item if char.isalpha()]
                     item = "".join(goodchars)
                 if item in list(spellingdict.keys()):
                     newitem = spellingdict[item]
@@ -284,16 +278,18 @@ def load_fluency_data(filepath,category=None,removePerseverations=False,removeIn
                 # add item to list
                 try:
                     itemval=list(items[idx].values()).index(item)
-                    if (not removePerseverations) or (itemval not in Xs[idx][listnum_int]):   # ignore any duplicates in same list resulting from spelling corrections
-                        if (item in validitems) or (not removeIntrusions) or (item[0] == targetletter):
-                            Xs[idx][listnum_int].append(itemval)
-                            if has_rt_col:
-                                irts[idx][listnum_int].append(int(irt))
-                    else:
+                    if (
+                        removePerseverations
+                        and itemval in Xs[idx][listnum_int]
+                    ):
                         perseverations[idx][listnum_int].append(item) # record as perseveration
+                    elif (item in validitems) or (not removeIntrusions) or (item[0] == targetletter):
+                        Xs[idx][listnum_int].append(itemval)
+                        if has_rt_col:
+                            irts[idx][listnum_int].append(int(irt))
                 except:
                     pass                # bad practice to have empty except
-   
+
     return Data({'Xs': Xs, 'items': items, 'irts': irts, 'structure': hierarchical, 
                  'spell_corrected': spell_corrected, 'perseverations': perseverations, 'intrusions': intrusions})
 

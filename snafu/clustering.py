@@ -16,12 +16,10 @@ def clusterSize(l, scheme, clustertype='fluid'):
             description here. 
     """
     clist = findClusters(l, scheme, clustertype)
-    
+
     avglists=[]
     for i in clist:
-        avglist=[]
-        for l in i:
-            avglist.append(np.mean(l))
+        avglist = [np.mean(l) for l in i]
         avglists.append(np.mean(avglist))
     return avglists
 
@@ -41,12 +39,12 @@ def clusterSwitch(l, scheme, clustertype='fluid',switchrate=False):
             description here. 
     """
     clist = findClusters(l, scheme, clustertype)
-    
+
     avglists=[]
     for inum, i in enumerate(clist):
-        avgnum=[]
         if len(i) > 0:
             if isinstance(i[0], list):
+                avgnum=[]
                 for lstnum, lst in enumerate(i):
                     switches = len(lst)-1
                     if switchrate:
@@ -78,19 +76,16 @@ def findClusters(l, scheme, clustertype='fluid'):
     """
     # only convert items to labels if list of items, not list of lists
     if len(l) > 0:
-        if isinstance(l[0], list):
-            clusters=l
-        else:
-            clusters=labelClusters(l, scheme)
+        clusters = l if isinstance(l[0], list) else labelClusters(l, scheme)
     else:
         clusters=[]
-    
+
     csize=[]
     curcats=set([])
     runlen=0
     clustList=[]
     firstitem=1
-    for inum, item in enumerate(clusters):
+    for item in clusters:
         if isinstance(item, list):
             clustList.append(findClusters(item, scheme, clustertype=clustertype))
         else:
@@ -100,7 +95,7 @@ def findClusters(l, scheme, clustertype='fluid'):
                 runlen = 1
             else:                                                   # shared cluster or start of list
                 runlen += 1
-            
+
             if clustertype=="fluid":
                 curcats = newcats
             elif clustertype=="static":
@@ -137,7 +132,7 @@ def labelClusters(l, scheme, labelIntrusions=False, targetLetter=None):
         maxletters = scheme
         if targetLetter:
             targetLetter = targetLetter.lower()
-        
+
     else:
         raise Exception('Unknown clustering type in labelClusters()')
 
@@ -152,26 +147,29 @@ def labelClusters(l, scheme, labelIntrusions=False, targetLetter=None):
             item=item.lower().replace(' ','').replace("'","").replace("-","")
             if item not in list(cats.keys()):
                 cats[item]=cat
-            else:
-                if cat not in cats[item]:
-                    cats[item]=cats[item] + ';' + cat
+            elif cat not in cats[item]:
+                cats[item] = f'{cats[item]};{cat}'
     labels=[]
-    for inum, item in enumerate(l):
+    for item in l:
         if isinstance(item, list):
             labels.append(labelClusters(item, scheme, labelIntrusions=labelIntrusions, targetLetter=targetLetter))
         else:
             item=item.lower().replace(' ','')
-            if clustertype == "semantic":
+            if clustertype == "letter":
+                if (
+                    item[0] == targetLetter
+                    or targetLetter is None
+                    and labelIntrusions == False
+                ):
+                    labels.append(item[:maxletters])
+                elif labelIntrusions:
+                    if targetLetter is None:
+                        raise Exception('Cant label intrusions without a target letter [labelClusters]')
+                    else:
+                        labels.append("intrusion")     # if item not in dict, either ignore it or label is as category "intrusion"
+            elif clustertype == "semantic":
                 if item in list(cats.keys()):
                     labels.append(cats[item])
                 elif labelIntrusions:               # if item not in dict, either ignore it or label is as category "intrusion"
                     labels.append("intrusion")
-            elif clustertype == "letter":
-                if (item[0] == targetLetter) or ((targetLetter == None) and (labelIntrusions == False)):
-                    labels.append(item[:maxletters])
-                elif labelIntrusions:
-                    if targetLetter == None:
-                        raise Exception('Cant label intrusions without a target letter [labelClusters]')
-                    else:
-                         labels.append("intrusion")     # if item not in dict, either ignore it or label is as category "intrusion"
     return labels

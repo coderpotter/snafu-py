@@ -86,16 +86,16 @@ def ppf(alpha_2, a, b, lower=0.0, upper=1.0, span=11, maxiter=20):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if alpha_2 == 1.0:
-        return 1.0
-    elif alpha_2 == 0.0:
+    if alpha_2 == 0.0:
         return 0.0
+    elif alpha_2 == 1.0:
+        return 1.0
     nprange = np.linspace(lower, upper, span)
     highlow = [incomplete_beta(a, b, x) > alpha_2 for x in nprange]
     idx_of_true = [idx for idx, x in enumerate(highlow) if x == True]
     if len(idx_of_true) == span:
         return lower
-    elif len(idx_of_true) == 0:
+    elif not idx_of_true:
         return upper
     else:
         if maxiter == 0:

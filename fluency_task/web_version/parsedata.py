@@ -18,24 +18,21 @@ fulldata=[]
 
 for df in datafiles:
     subj=df.split('_')[0]
-    with open('./logs/'+df) as json_data:
+    with open(f'./logs/{df}') as json_data:
         data=json.load(json_data)
     for gamenum, game in enumerate(data):
         shortlist = 1 if len(game["items"]) <= 5 else 0
         category=game["category"]
         for i, item in enumerate(game["items"]):
             rtstart=game["times"][i]-game["starttime"]
-            if i==0:
-                rt=rtstart
-            else:
-                rt=game["times"][i]-game["times"][i-1]
+            rt = rtstart if i==0 else game["times"][i]-game["times"][i-1]
             cleanitem=item.lower().replace(" ","").replace("?","").replace("'","").replace("]","")
             if cleanitem[-3:] == "ies":
                 cleanitem=cleanitem.rstrip("ies") + "y"
             elif cleanitem[-2:] == "es":
                 cleanitem=cleanitem.rstrip("es")
             elif cleanitem[-1] == "s":
-                cleanitem=cleanitem.rstrip("s") 
+                cleanitem=cleanitem.rstrip("s")
             line=[subj, gamenum, category, cleanitem, rt, rtstart, shortlist]
             fulldata.append(line)
 

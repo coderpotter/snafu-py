@@ -15,29 +15,25 @@ def nodeDegreeSearch(g, td):
             description here. 
     """
     numnodes=nx.number_of_nodes(g)
-    if td.trim <= 1:
-        numtrim=int(round(numnodes*td.trim))       # if <=1, paramater is proportion of a list
-    else:
-        numtrim=td.trim                            # else, parameter is length of a list
-    
+    numtrim = int(round(numnodes*td.trim)) if td.trim <= 1 else td.trim
     # make list of nodes by frequency
     l=[]
     for i, j in g.degree().items():
         l=l+[i]*j
-    
+
     # simulate search
     walk=[]
-    
+
     if td.start_node[0]=="specific":
         newnode=td.start_node[1]
         walk.append(newnode)
         l[:] = [j for j in l if j != newnode]
-    
+
     while len(walk) < numtrim:
         newnode=np.random.choice(l)
         walk.append(newnode)
         l[:] = [j for j in l if j != newnode]
-    
+
     return walk
 
 # cluster-based depth first search: output all neighbors of starting node (random order), then all neighbors of most recently
@@ -55,40 +51,34 @@ def cbdfs(g, td):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    import scipy    
+    import scipy
     numnodes=nx.number_of_nodes(g)
-    if td.trim <= 1:
-        numtrim=int(round(numnodes*td.trim))       # if <=1, paramater is proportion of a list# make list of nodes by frequency
-    else:
-        numtrim=td.trim                            # else, parameter is length of a list
-    # simulate search
-    walk=[]
-    
+    numtrim = int(round(numnodes*td.trim)) if td.trim <= 1 else td.trim
     if (td.start_node=="stationary") or (td.jumptype=="stationary"):
         a=np.array(nx.to_numpy_matrix(g))
         t=a/sum(a).astype(float)
         statdist=stationary(t)
         statdist=scipy.stats.rv_discrete(values=(list(range(len(t))),statdist))
-    
+
     if td.start_node=="stationary":
         start=statdist.rvs(random_state=seed)      # choose starting point from stationary distribution #TODO: no definition of seed
     elif td.start_node=="uniform":
         start=np.random.choice(nx.nodes(g))        # choose starting point uniformly
     elif td.start_node[0]=="specific":
         start=td.start_node[1]
-    
+
     unused_nodes=g.nodes()
-    walk.append(start)
+    walk = [start]
     unused_nodes.remove(start)
     currentnode=start
-    
+
     # will have problems with disconnected graphs if numtrim is too high!
     while len(walk) < numtrim:
         next_nodes=g.neighbors(currentnode)
         next_nodes[:]=[i for i in next_nodes if i in unused_nodes]
         np.random.shuffle(next_nodes)
         if len(next_nodes) > 0:
-            walk = walk + next_nodes
+            walk += next_nodes
             unused_nodes[:] = [i for i in unused_nodes if i not in next_nodes]
             currentnode=walk[-1]
         else:
@@ -110,31 +100,27 @@ def spreadingActivationSearch(g, td, decay):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    import scipy    
+    import scipy
     numnodes=nx.number_of_nodes(g)
-    if td.trim <= 1:
-        numtrim=int(round(numnodes*td.trim))       # if <=1, paramater is proportion of a list# make list of nodes by frequency
-    else:
-        numtrim=td.trim                            # else, parameter is length of a list
-    
+    numtrim = int(round(numnodes*td.trim)) if td.trim <= 1 else td.trim
     if (td.start_node=="stationary") or (td.jumptype=="stationary"):
         a=np.array(nx.to_numpy_matrix(g))
         t=a/sum(a).astype(float)
         statdist=stationary(t)
         statdist=scipy.stats.rv_discrete(values=(list(range(len(t))),statdist))
-    
+
     if td.start_node=="stationary":
         start=statdist.rvs(random_state=seed)      # choose starting point from stationary distribution #TODO: no definition of seed
     elif td.start_node=="uniform":
         start=np.random.choice(nx.nodes(g))        # choose starting point uniformly
     elif td.start_node[0]=="specific":
         start=td.start_node[1]
-    
+
     activations=dict.fromkeys(list(range(numnodes)), 0)
 
     activations[start]=1.0
     walk=[start]
-    
+
     while len(walk) < numtrim:
         newacts=dict.fromkeys(list(range(numnodes)), 0)
         walknodes=[]
@@ -143,14 +129,13 @@ def spreadingActivationSearch(g, td, decay):
             newact=activations[node]*decay
             for i in nn:
                 newact += activations[i]
-            if newact > 1.0:
-                newact = 1.0
+            newact = min(newact, 1.0)
             newacts[node] = newact
-        
+
         for i in activations:            # batch update
             activations[i]=newacts[i]
-         
-        denom = float(sum([activations[i] for i in activations if i not in walk]))
+
+        denom = float(sum(activations[i] for i in activations if i not in walk))
         probs=[activations[i]/denom for i in activations]
         for i in walk:
             probs[i]=0.0
@@ -158,5 +143,5 @@ def spreadingActivationSearch(g, td, decay):
         newnode=np.random.choice(list(range(numnodes)),p=probs)
         walk.append(newnode)
         activations[newnode]=1.0
-        
+
     return walk

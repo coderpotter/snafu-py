@@ -26,14 +26,16 @@ def addJumps(probs, td, numnodes=None, statdist=None, Xs=None):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if (td.jumptype == "uniform") and (numnodes == None):
+    if td.jumptype == "uniform" and numnodes is None:
         raise ValueError("Must specify 'numnodes' when jumptype is uniform [addJumps]")
-    if (td.jumptype == "stationary") and (np.any(statdist == None) or (Xs == None)):
+    if td.jumptype == "stationary" and (
+        np.any(statdist is None) or Xs is None
+    ):
         raise ValueError("Must specify 'statdist' and 'Xs' when jumptype is stationary [addJumps]")
 
     if td.jumptype == "uniform":
         jumpprob = float(td.jump)/numnodes                     # uniform jumping
-    
+
     for l in range(len(probs)):                                # loop through all lists (l)
         for inum, i in enumerate(probs[l][1:]):                # loop through all items (i) excluding first (don't jump to item 1)
             if td.jumptype=="stationary":
@@ -86,9 +88,9 @@ def pathfinder(Xs, numnodes=None, valid=False, td=None):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if numnodes == None:
+    if numnodes is None:
         numnodes = len(set(flatten_list(Xs)))
-    
+
     # From https://github.com/evanmiltenburg/dm-graphs
     def MST_pathfinder(G):
         """The MST-pathfinder algorithm (Quirin et al. 2008) reduces the graph to the
@@ -98,7 +100,7 @@ def pathfinder(Xs, numnodes=None, valid=False, td=None):
         edges = sorted( ((G[a][b]['weight'],a,b) for a,b in G.edges()),
                             reverse=False)                                                # smaller distances are more similar
         clusters = {node:i for i,node in enumerate(G.nodes())}
-        while not edges == []:
+        while edges != []:
             w1,a,b = edges[0]
             l      = []
             # Select edges to be considered this round:
@@ -110,7 +112,7 @@ def pathfinder(Xs, numnodes=None, valid=False, td=None):
             # Remaining edges are those not being considered this round:
             edges = edges[len(l):]
             # Only select those edges for which the items are not in the same cluster
-            l = [(a,b,c) for a,b,c in l if not clusters[a]==clusters[b]]
+            l = [(a,b,c) for a,b,c in l if clusters[a] != clusters[b]]
             # Add these edges to the graph:
             NG.add_weighted_edges_from(l)
             # Merge the clusters:
@@ -123,7 +125,7 @@ def pathfinder(Xs, numnodes=None, valid=False, td=None):
 
     if valid and not td:
         raise ValueError('Need to pass DataModel when generating \'valid\' pathfinder()')
-        
+
     N = float(len(Xs))
     distance_mat = np.zeros((numnodes, numnodes))
     for item1 in range(numnodes):
@@ -155,7 +157,7 @@ def pathfinder(Xs, numnodes=None, valid=False, td=None):
 
     if valid:
         graph = makeValid(Xs, graph, td)
-        
+
     #return np.array(graph).astype(int)
     return graph
 
@@ -175,10 +177,7 @@ def cost(graph,a, undirected=True):
             description here. 
     """
     cost = sum(sum(np.array(abs(graph-a))))
-    if undirected:
-        return cost/2.0
-    else:
-        return cost
+    return cost/2.0 if undirected else cost
 
 # graph=estimated graph, a=target/comparison graph
 def costSDT(graph, a):
@@ -194,7 +193,10 @@ def costSDT(graph, a):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    hit=0; miss=0; fa=0; cr=0
+    hit=0
+    miss=0
+    fa=0
+    cr=0
     check=(graph==a)
     for rnum, r in enumerate(a):
         for cnum, c in enumerate(r[:rnum]):
@@ -203,11 +205,10 @@ def costSDT(graph, a):
                     hit += 1
                 else:
                     cr += 1
+            elif a[rnum,cnum]==1:
+                miss += 1
             else:
-                if a[rnum,cnum]==1:
-                    miss += 1
-                else:
-                    fa += 1
+                fa += 1
     return [hit, miss, fa, cr]
 
 def evalGraphPrior(a, prior, undirected=True):
@@ -262,7 +263,7 @@ def firstEdge(Xs, numnodes=None):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if numnodes == None:
+    if numnodes is None:
         numnodes = len(set(flatten_list(Xs)))
     a=np.zeros((numnodes,numnodes))
     for x in Xs:
@@ -303,7 +304,7 @@ def naiveRandomWalk(Xs, numnodes=None, directed=False):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if numnodes == None:
+    if numnodes is None:
         numnodes = len(set(flatten_list(Xs)))
     a=np.zeros((numnodes,numnodes))
     for x in Xs:
@@ -332,12 +333,12 @@ def genGraphPrior(graphs, items, fitinfo=Fitinfo({}), mincount=1, undirected=Tru
     b_start = fitinfo.prior_b
     method = fitinfo.prior_method
     p = fitinfo.zibb_p
-    
+
     priordict={}
-  
+
     #def betabinomial(a,b):
     #    return (b / (a + b))
-    
+
     def zeroinflatedbetabinomial(a,b,p):
         return (b / ((1-p)*a+b))
 
@@ -349,10 +350,7 @@ def genGraphPrior(graphs, items, fitinfo=Fitinfo({}), mincount=1, undirected=Tru
                 if (inum > jnum) or ((undirected==False) and (inum != jnum)):
                     item1 = itemdict[inum]
                     item2 = itemdict[jnum]
-                    if undirected:
-                        pair = np.sort((item1,item2))
-                    else:
-                        pair = (item1,item2)
+                    pair = np.sort((item1,item2)) if undirected else (item1, item2)
                     if pair[0] not in list(priordict.keys()):
                         priordict[pair[0]]={}
                     if pair[1] not in list(priordict[pair[0]].keys()):
@@ -361,7 +359,7 @@ def genGraphPrior(graphs, items, fitinfo=Fitinfo({}), mincount=1, undirected=Tru
                         priordict[pair[0]][pair[1]][1] += 1.0 # increment b counts
                     elif j==0:
                         priordict[pair[0]][pair[1]][0] += 1.0 # increment a counts
-   
+
     if not returncounts:
         for item1 in priordict:
             for item2 in priordict[item1]:
@@ -381,7 +379,7 @@ def genGraphPrior(graphs, items, fitinfo=Fitinfo({}), mincount=1, undirected=Tru
             priordict['DEFAULTPRIOR'] = zeroinflatedbetabinomial(a_start, b_start, p)
             #elif method=="betabinomial":
             #    priordict['DEFAULTPRIOR'] = betabinomial(a_start, b_start)
-    
+
     return priordict
 
 # generate starting graph for U-INVITE
@@ -399,18 +397,17 @@ def genStartGraph(Xs, numnodes, td, fitinfo):
             description here. 
     """
     if fitinfo.startGraph=="cn_valid":
-        graph = conceptualNetwork(Xs, numnodes, td=td, valid=True, fitinfo=fitinfo)
+        return conceptualNetwork(Xs, numnodes, td=td, valid=True, fitinfo=fitinfo)
     elif fitinfo.startGraph=="pf_valid":
-        graph = pathfinder(Xs, numnodes, valid=True, td=td)
-    elif (fitinfo.startGraph=="rw" or fitinfo.startGraph=="nrw"):
-        graph = naiveRandomWalk(Xs,numnodes)
+        return pathfinder(Xs, numnodes, valid=True, td=td)
+    elif fitinfo.startGraph in ["rw", "nrw"]:
+        return naiveRandomWalk(Xs,numnodes)
     elif fitinfo.startGraph=="fully_connected":
-        graph = fullyConnected(numnodes)
+        return fullyConnected(numnodes)
     elif fitinfo.startGraph=="empty_graph":
-        graph = np.zeros((numnodes,numnodes)).astype(int)           # useless...
+        return np.zeros((numnodes,numnodes)).astype(int)
     else:
-        graph = np.copy(fitinfo.startGraph)                         # assume a graph has been passed as a starting point
-    return graph
+        return np.copy(fitinfo.startGraph)
 
 # deprecated alias for backwards compatibility
 def communitynetwork(*args, **kwargs):
@@ -433,13 +430,13 @@ def conceptualNetwork(Xs, numnodes=None, fitinfo=Fitinfo({}), valid=False, td=No
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if numnodes == None:
+    if numnodes is None:
         numnodes = len(set(flatten_list(Xs)))
-        
+
     w = fitinfo.cn_windowsize
     f = fitinfo.cn_threshold
     c = fitinfo.cn_alpha
-    
+
     if f<1:                 # if <1 treat as proportion of total lists; if >1 treat as absolute # of lists
         f=int(round(len(Xs)*f))
 
@@ -456,27 +453,21 @@ def conceptualNetwork(Xs, numnodes=None, fitinfo=Fitinfo({}), valid=False, td=No
     graph=np.zeros((numnodes, numnodes)).astype(int)         # empty graph
 
     # frequency of co-occurrences within window (w)
-    for x in Xs:                                             # for each list
+    for x in Xs:                                         # for each list
         cooccur_within_list = []                             # only count one cooccurence per list (for binomial test)
-        for pos in range(len(x)):                            # for each item in list
-            for i in range(1, w+1):                          # for each window size
+        for pos in range(len(x)):                    # for each item in list
+            for i in range(1, w+1):              # for each window size
                 if pos+i<len(x):
                     if (x[pos], x[pos+i]) not in cooccur_within_list:
                         graph[x[pos],x[pos+i]] += 1
                         graph[x[pos+i],x[pos]] += 1
-                        cooccur_within_list.append((x[pos], x[pos+i]))
-                        cooccur_within_list.append((x[pos+i], x[pos]))
-
+                        cooccur_within_list.extend(((x[pos], x[pos+i]), (x[pos+i], x[pos])))
     # exclude edges with co-occurrences less than frequency (f) and binarize
     # but first save co-occurence frequencies
     cooccur = np.copy(graph)
     for i in range(len(graph)):
         for j in range(len(graph)):
-            if graph[i, j] < f:
-                graph[i, j] = 0
-            else:
-                graph[i, j] = 1
-
+            graph[i, j] = 0 if graph[i, j] < f else 1
     # check if co-occurrences are due to chance
     if c<1:
         setXs=[list(set(x)) for x in Xs]                              # unique nodes in each list
@@ -485,7 +476,7 @@ def conceptualNetwork(Xs, numnodes=None, fitinfo=Fitinfo({}), valid=False, td=No
         listofedges=list(zip(*np.nonzero(graph)))                           # list of edges in graph to check
         numlists=float(len(Xs))
         meanlistlength=np.mean([len(x) for x in Xs])
-    
+
         # Goni et al. (2011), eq. 10
         p_adj = (2.0/(meanlistlength*(meanlistlength-1))) * ((w*meanlistlength) - ((w*(w+1))/2.0))
         for i,j in listofedges:
@@ -571,10 +562,10 @@ def hierarchicalUinvite(Xs, items, numnodes=None, td=DataModel({}), irts=False, 
             description here. 
     """
 
-    if numnodes == None:
+    if numnodes is None:
         numnodes = [len(set(flatten_list(x))) for x in Xs]
-    
-    nplocal=np.random.RandomState(seed) 
+
+    nplocal=np.random.RandomState(seed)
     fitinfoSG = fitinfo.startGraph  # fitinfo is mutable, need to revert at end of function... blah
     # create ids for all subjects
     subs=list(range(len(Xs)))
@@ -590,16 +581,12 @@ def hierarchicalUinvite(Xs, items, numnodes=None, td=DataModel({}), irts=False, 
         nplocal.shuffle(subs)
         for sub in [i for i in subs if i not in exclude_subs]:
             if debug: print("SS: ", sub)
-            
-            if graphs[sub] == []:
-                fitinfo.startGraph = fitinfoSG      # on first pass for subject, use default fitting method (e.g., NRW, goni, etc)
-            else:
-                fitinfo.startGraph = graphs[sub]    # on subsequent passes, use ss graph from previous iteration
 
+            fitinfo.startGraph = fitinfoSG if graphs[sub] == [] else graphs[sub]
             # generate prior without participant's data, fit graph
             priordict = genGraphPrior(graphs[:sub]+graphs[sub+1:], items[:sub]+items[sub+1:], fitinfo=fitinfo)
             prior = (priordict, items[sub])
-            
+
             if isinstance(irts, list):
                 uinvite_graph, bestval = uinvite(Xs[sub], td, numnodes[sub], fitinfo=fitinfo, prior=prior, irts=irts[sub])
             else:
@@ -616,7 +603,7 @@ def hierarchicalUinvite(Xs, items, numnodes=None, td=DataModel({}), irts=False, 
     ## generate group graph
     priordict = genGraphPrior(graphs, items, fitinfo=fitinfo)
     fitinfo.startGraph = fitinfoSG  # reset fitinfo starting graph to default
-    
+
     return graphs, priordict
 
 def probXhierarchical(Xs, graphs, items, td, priordict=None, irts=Irts({})):
@@ -634,14 +621,10 @@ def probXhierarchical(Xs, graphs, items, td, priordict=None, irts=Irts({})):
     """
     lls=[]
     for sub in range(len(Xs)):
-        if priordict:
-            prior = (priordict, items[sub])
-        else:
-            prior=None
+        prior = (priordict, items[sub]) if priordict else None
         best_ll, probmat = probX(Xs[sub], graphs[sub], td, irts=irts, prior=prior)   # LL of graph
         lls.append(best_ll)
-    ll=sum(lls)
-    return ll
+    return sum(lls)
 
 # construct graph using method using item correlation matrix and planar maximally filtered graph (PMFG)
 # see Borodkin, Kenett, Faust, & Mashal (2016) and Kenett, Kenett, Ben-Jacob, & Faust (2011)
@@ -661,19 +644,19 @@ def correlationBasedNetwork(Xs, numnodes=None, minlists=0, valid=False, td=None)
     """
     if valid and not td:
         raise ValueError('Need to pass Data when generating \'valid\' kenett()')
-    
+
     import planarity
-    
-    if numnodes == None:
+
+    if numnodes is None:
         numnodes = len(set(flatten_list(Xs)))
- 
+
     # construct matrix of list x item where each cell indicates whether that item is in that list
     list_by_item = np.zeros((numnodes,len(Xs)))
     for node in range(numnodes):
         for x in range(len(Xs)):
             if node in Xs[x]:
                 list_by_item[node,x]=1.0
-    
+
     # find pearsonr correlation for all item pairs
     item_by_item = {}
     for item1 in range(numnodes):
@@ -683,7 +666,7 @@ def correlationBasedNetwork(Xs, numnodes=None, minlists=0, valid=False, td=None)
             else:
                 #item_by_item[(item1, item2)] = scipy.stats.pearsonr(list_by_item[item1],list_by_item[item2])[0]
                 item_by_item[(item1, item2)] = pearsonr(list_by_item[item1],list_by_item[item2])
-    
+
     corr_vals = sorted(item_by_item, key=item_by_item.get)[::-1]       # keys in correlation dictionary sorted by value (high to low, including NaN first)
 
     edgelist=[]
@@ -692,15 +675,15 @@ def correlationBasedNetwork(Xs, numnodes=None, minlists=0, valid=False, td=None)
             edgelist.append(pair)
             if not planarity.is_planar(edgelist):
                 edgelist.pop()
-    
+
     g = nx.Graph()
     g.add_nodes_from(list(range(numnodes)))
     g.add_edges_from(edgelist)
     a=np.array(nx.to_numpy_matrix(g)).astype(int)
-   
+
     if valid:
         a = makeValid(Xs, a, td)
-   
+
     return a
 
 def makeValid(Xs, graph, td, seed=None):
