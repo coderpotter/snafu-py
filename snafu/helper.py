@@ -71,7 +71,12 @@ def flatten_list(l, numtimes=1):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    l1 = [item for sublist in l if isinstance(sublist,list) or isinstance(sublist,np.ndarray) for item in sublist]
+    l1 = [
+        item
+        for sublist in l
+        if isinstance(sublist, (list, np.ndarray))
+        for item in sublist
+    ]
     l = l1+[item for item in l if not isinstance(item,list) and not isinstance(item,np.ndarray)]
     if numtimes > 1:
         l = flatten_list(l, numtimes-1)
@@ -93,8 +98,7 @@ def logTrick(loglist):
     """
     logmax=max(loglist)
     loglist=[i-logmax for i in loglist]                     # log trick: subtract off the max
-    p=np.log(sum([np.e**i for i in loglist])) + logmax  # add it back on
-    return p
+    return np.log(sum(np.e**i for i in loglist)) + logmax
 
 # helper function grabs highest n items from list items **UNUSED
 # http://stackoverflow.com/questions/350519/getting-the-lesser-n-elements-of-a-list-in-python
@@ -141,12 +145,9 @@ def mexgauss(rts):
     start = [np.nan, np.nan, np.nan]
     k[0] = np.mean(rts)
     xdev = [rt - k[0] for rt in rts]
-    k[1] = sum([i**2 for i in xdev])/(n - 1.0)
-    k[2] = sum([i**3 for i in xdev])/(n - 1.0)
-    if (k[2] > 0):
-        start[2] = (k[2]/2.0)**(1/3.0)
-    else:
-        start[2] = 0.8 * np.std(rts)
+    k[1] = sum(i**2 for i in xdev) / (n - 1.0)
+    k[2] = sum(i**3 for i in xdev) / (n - 1.0)
+    start[2] = (k[2]/2.0)**(1/3.0) if (k[2] > 0) else 0.8 * np.std(rts)
     start[1] = np.sqrt(abs(k[1] - start[2]**2))
     start[0] = k[0] - start[2]
     start[2] = (1.0/start[2])   # tau to lambda
@@ -275,11 +276,7 @@ def reverseDict(items):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    newitems=dict()
-    for itemnum in items:
-        itemlabel = items[itemnum]
-        newitems[itemlabel] = itemnum
-    return newitems
+    return {items[itemnum]: itemnum for itemnum in items}
 
 # remove perseverations -- keep only first occurrence in place
 # https://www.peterbe.com/plog/uniqifiers-benchmark
@@ -297,8 +294,7 @@ def no_persev(x):
             description here. 
     """
     seen = set()
-    seen_add = seen.add
-    return [i for i in x if not (i in seen or seen_add(i))]
+    return [i for i in x if i not in seen and not seen.add(i)]
 
 # this function is copied from scipy to avoid shipping that whole library with snafu
 # unlike scipy version, this one doesn't return p-value (requires C code from scipy)
@@ -424,10 +420,7 @@ def edges_from_nodes(path):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    walk=[]
-    for i in range(len(path)-1):
-        walk.append((path[i],path[i+1])) 
-    return walk
+    return [(path[i],path[i+1]) for i in range(len(path)-1)]
 
 def stationary(t, method="unweighted"):
     """One line description here.
@@ -442,11 +435,10 @@ def stationary(t, method="unweighted"):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    if method=="unweighted":                 # only works for unweighted matrices!
+    if method=="unweighted":
         return sum(t>0)/float(sum(sum(t>0)))
-    else:                                       # buggy
-        eigen=np.linalg.eig(t)[1][:,0]
-        return np.real(eigen/sum(eigen))
+    eigen=np.linalg.eig(t)[1][:,0]
+    return np.real(eigen/sum(eigen))
 
 
 # Unique nodes in random walk preserving order
@@ -504,8 +496,6 @@ def firstHits(walk):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    firsthit=[]
     path=edges_from_nodes(walk)
-    for i in censored(walk):
-        firsthit.append(path.index(i))
+    firsthit = [path.index(i) for i in censored(walk)]
     return list(zip(censored(walk),firsthit))

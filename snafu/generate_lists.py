@@ -21,10 +21,7 @@ def gen_lists(g, td, seed=None):
     priming_vector=[]
 
     for xnum in range(td.numx):
-        if seed == None:
-            seedy = None
-        else:
-            seedy = seed + xnum
+        seedy = None if seed is None else seed + xnum
         rwalk=random_walk(g, td, priming_vector=priming_vector, seed=seedy)
         x=censored(rwalk, td)
         # fh=list(zip(*firstHits(rwalk)))[1]
@@ -32,7 +29,7 @@ def gen_lists(g, td, seed=None):
         Xs.append(x)
         if td.priming > 0.0:
             priming_vector=x[:]
-        # steps.append(step)
+            # steps.append(step)
     td.priming_vector = []      # reset mutable priming vector between participants; JCZ added 9/29, untested
 
     alter_graph_size=0
@@ -73,7 +70,7 @@ def random_walk(g, td, priming_vector=[], seed=None):
         t=a/sum(a).astype(float)
         statdist=stationary(t)
         statdist=scipy.stats.rv_discrete(values=(list(range(len(t))),statdist))
-    
+
     if td.start_node=="stationary":
         start=statdist.rvs(random_state=seed)    # choose starting point from stationary distribution
     elif td.start_node=="uniform":
@@ -85,24 +82,23 @@ def random_walk(g, td, priming_vector=[], seed=None):
     unused_nodes=set(nx.nodes(g))
     unused_nodes.remove(start)
     first=start
-    
+
     numnodes=nx.number_of_nodes(g)
-    if td.trim <= 1:
-        numtrim=int(round(numnodes*td.trim))       # if <=1, paramater is proportion of a list
-    else:
-        numtrim=td.trim                            # else, parameter is length of a list
+    numtrim = int(round(numnodes*td.trim)) if td.trim <= 1 else td.trim
     num_unused = numnodes - numtrim
 
     censoredcount=0                                # keep track of censored nodes and jump after td.jumponcensored censored nodes
 
     numsteps = 0
-    while (len(unused_nodes) > num_unused) and ((td.maxsteps == None) or (numsteps < td.maxsteps)):       # covers td.trim nodes-- list could be longer if it has perseverations
+    while len(unused_nodes) > num_unused and (
+        td.maxsteps is None or numsteps < td.maxsteps
+    ):   # covers td.trim nodes-- list could be longer if it has perseverations
 
         # jump after n censored nodes or with random probability (depending on parameters)
         if (censoredcount == td.jumponcensored) or (nplocal.random_sample() < td.jump):
             second=jump()
-        else:                                           # no jumping!
-            second=nplocal.choice([x for x in nx.all_neighbors(g,first)]) # follow random edge (actual random walk!)
+        else:                                   # no jumping!
+            second = nplocal.choice(list(nx.all_neighbors(g,first)))
             if (td.priming > 0.0) and (len(priming_vector) > 0):
                 if (first in priming_vector[:-1]) & (nplocal.random_sample() < td.priming):      
                     idx=priming_vector.index(first)

@@ -97,13 +97,13 @@ def label_to_filepath(x, root_path, filetype):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    filedict=dict()
-    folder = root_path + "/" + filetype + "/"
+    filedict = {}
+    folder = f"{root_path}/{filetype}/"
 
     # since filenames are populated from directory listing there's no need to build a dict() anymore, but that's the way it's done still
     for filename in os.listdir(folder):
         if "csv" in filename:
-            label = filename[0:filename.find('.')].replace('_',' ')
+            label = filename[:filename.find('.')].replace('_', ' ')
             filedict[label] = folder + filename
     try:
         filename = filedict[x]
@@ -131,31 +131,24 @@ def data_properties(command, root_path):
     # Initialize some filenames
     freqfile = label_to_filepath(command['freqfile'], root_path, "frequency")
     aoafile = label_to_filepath(command['aoafile'], root_path, "aoa")
-    
+
     # Letter fluency scheme or semantic fluency scheme?
     preset_schemes = {"1 letter": 1,
                       "2 letters": 2,
                       "3 letters": 3}
-    if command['cluster_scheme'] in preset_schemes.keys():
+    if command['cluster_scheme'] in preset_schemes:
         schemefile = preset_schemes[command['cluster_scheme']]
     else:
         schemefile = label_to_filepath(command['cluster_scheme'], root_path, "schemes")
-    
+
     # Import a single subject or group of subjects?
     if command['factor_type'] == "subject":
         subject = str(command['subject'])
         group = None
     elif command['factor_type'] == "group":
-        if command['group'] != "all":
-            group = command['group']
-        else:
-            group = None
+        group = command['group'] if command['group'] != "all" else None
         subject = None
-    if command['category'] == "all":
-        category = None
-    else:
-        category = command['category']
-
+    category = None if command['category'] == "all" else command['category']
     # Load fluency data
     filedata = load_fluency_data(command['fullpath'], category=category, spell=label_to_filepath(command['spellfile'], root_path, "spellfiles"), group=group, subject=subject, hierarchical=True)
     labeledXs = filedata.labeledXs
@@ -178,19 +171,19 @@ def data_properties(command, root_path):
     avg_num_perseverations = np.mean([np.mean(i) for i in avg_num_perseverations_list])
     avg_num_perseverations_list = flatten_list(avg_num_perseverations_list)
     list_of_perseverations = flatten_list(list_of_perseverations)
-    
+
     if command['cluster_scheme'] != "None":
         # calculate cluster sizes
         list_of_clusters = findClusters(labeledXs, schemefile, clustertype=command['cluster_type'])
         avg_cluster_size_list = [[np.mean(l) for l in subj] for subj in list_of_clusters]
         avg_cluster_size = np.mean([np.mean(i) for i in avg_cluster_size_list])
         avg_cluster_size_list = flatten_list(avg_cluster_size_list)
-        
+
         # calculate cluster switches
         avg_num_cluster_switches_list = [[len(l)-1 for l in subj] for subj in list_of_clusters]
         avg_num_cluster_switches = np.mean([np.mean(i) for i in avg_num_cluster_switches_list])
         avg_num_cluster_switches_list = flatten_list(avg_num_cluster_switches_list)
-        
+
         # calculate intrusions
         if command['fluency_type'] == "semantic":
             list_of_intrusions = intrusionsList(labeledXs, schemefile)
@@ -207,26 +200,28 @@ def data_properties(command, root_path):
         avg_cluster_size = "n/a"
         avg_num_cluster_switches = "n/a"
         # arbitrarily use `avg_num_perseverations_list` to create empty lists with correct number of elements
-        avg_num_intrusions_list = ["" for i in range(len(avg_num_perseverations_list))]
-        avg_num_cluster_switches_list = ["" for i in range(len(avg_num_perseverations_list))]
-        avg_cluster_size_list = ["" for i in range(len(avg_num_perseverations_list))]
+        avg_num_intrusions_list = ["" for _ in range(len(avg_num_perseverations_list))]
+        avg_num_cluster_switches_list = [
+            "" for _ in range(len(avg_num_perseverations_list))
+        ]
+        avg_cluster_size_list = ["" for _ in range(len(avg_num_perseverations_list))]
 
     # count number of lists per participant
     num_lists_list = [len(subj) for subj in labeledXs]
     num_lists = np.mean(num_lists_list)
-  
+
     # number of items listed for each participant
     avg_items_listed_list = [[len(l) for l in subj] for subj in labeledXs]
     avg_items_listed = np.mean([np.mean(i) for i in avg_items_listed_list])
     avg_items_listed_list = flatten_list(avg_items_listed_list)
-  
+
     # calculate age-of-acquisition and word frequency
     # loads word lists for each subject which could be optimized...
     aoa_list = []
     word_aoa_excluded = []
     freq_list = []
     word_freq_excluded = []
-    
+
     for subj in labeledXs:
         aoa, excluded = wordStat(subj, missing=aoa_sub, data=aoafile)
         aoa_list.append(aoa)
@@ -235,26 +230,26 @@ def data_properties(command, root_path):
         freq, excluded = wordStat(subj, missing=freq_sub, data=freqfile)
         freq_list.append(freq)
         word_freq_excluded.append(excluded)
-        
+
     avg_word_freq = np.mean([np.mean(i) for i in freq_list])
     avg_word_aoa = np.mean([np.mean(i) for i in aoa_list])
     freq_list = flatten_list(freq_list)
     aoa_list = flatten_list(aoa_list)
     word_freq_excluded = flatten_list(word_freq_excluded)
     word_aoa_excluded = flatten_list(word_aoa_excluded)
- 
+
     # calculate % of missing word tokens from age-of-acquisition and word frequency dictionaries
     total_words = len(flatten_list(labeledXs,2))
     word_freq_rate = len(flatten_list(word_freq_excluded)) / float(total_words)
-    word_freq_rate = str(round(word_freq_rate * 100, 2))+'%'
+    word_freq_rate = f'{str(round(word_freq_rate * 100, 2))}%'
     word_aoa_rate = len(flatten_list(word_aoa_excluded)) / float(total_words)
-    word_aoa_rate = str(round(word_aoa_rate * 100, 2))+'%'
-   
+    word_aoa_rate = f'{str(round(word_aoa_rate * 100, 2))}%'
+
     # list of subjects and list nums
     subsandlists = list(zip(*filedata.listnums))
     subs = list(subsandlists[0])
     listnums = list(subsandlists[1])
-    
+
     # make csv file
     from collections import OrderedDict
     csv_data = OrderedDict()
@@ -272,8 +267,8 @@ def data_properties(command, root_path):
     # list of spelling corrections
     spell_corrected = flatten_list(filedata.spell_corrected)
     spell_corrected = [[list(i) for i in l] for l in spell_corrected]
-    num_spell_corrections = sum([len(l) for l in spell_corrected])
-    
+    num_spell_corrections = sum(len(l) for l in spell_corrected)
+
     return { "type": "data_properties", 
              "listnums": filedata.listnums,
              "num_lists": num_lists,
@@ -337,26 +332,19 @@ def network_properties(command, root_path):
     command = command['network_parameters']
 
     # U-INVITE won't work with perseverations
-    if command['network_method'] == "U-INVITE":
-        removePerseverations=True
-    else:
-        removePerseverations=False
-   
+    removePerseverations = command['network_method'] == "U-INVITE"
     if subj_props['factor_type'] == "subject":
         subject = str(subj_props['subject'])
         group = None
     elif subj_props['factor_type'] == "group":
-        if subj_props['group'] != "all":
-            group = subj_props['group']
-        else:
-            group = None                             # reserved group label in GUI for all subjects
+        group = subj_props['group'] if subj_props['group'] != "all" else None
         subject = None
 
     filedata = load_fluency_data(subj_props['fullpath'], category=subj_props['category'], spell=label_to_filepath(subj_props['spellfile'], root_path, "spellfiles"), removePerseverations=removePerseverations, subject=subject, group=group)
     Xs = filedata.Xs
     items = filedata.items
     numnodes = filedata.numnodes
-    
+
     toydata=DataModel({
             'numx': len(Xs),
             'trim': 1,
@@ -377,18 +365,18 @@ def network_properties(command, root_path):
             'prune_limit': 100,
             'triangle_limit': 100,
             'other_limit': 100})
-   
+
     if command['prior']=="None":
         prior=None
     elif command['prior']=="USF":
         usf_file_path = "/snet/USF_animal_subset.snet"
         filename = root_path + usf_file_path
-        
+
         usf_graph, usf_items = read_graph(filename)
         usf_numnodes = len(usf_items)
         priordict = genGraphPrior([usf_graph], [usf_items], fitinfo=fitinfo)
         prior = (priordict, usf_items)
-        
+
     if command['network_method']=="Naive Random Walk":
         bestgraph = naiveRandomWalk(Xs, numnodes=numnodes)
     elif command['network_method']=="Conceptual Network":
@@ -401,10 +389,10 @@ def network_properties(command, root_path):
         bestgraph = firstEdge(Xs, numnodes=numnodes)
     elif command['network_method']=="U-INVITE":
         bestgraph, ll = uinvite(Xs, toydata, numnodes=numnodes, fitinfo=fitinfo, debug=False, prior=prior)
-    
+
     nxg = nx.to_networkx_graph(bestgraph)
     nxg_json = jsonGraph(nxg, items)
-    
+
     return graph_properties(nxg,nxg_json)
 
 def analyze_graph(command, root_path): # used when importing graphs

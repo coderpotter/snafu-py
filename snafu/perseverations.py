@@ -15,13 +15,15 @@ def perseverationsList(l):
             description here. 
     """
     if len(l) > 0:
-        if isinstance(l[0][0], list):
-            perseveration_items = [perseverationsList(i) for i in l]
-        else:
-            perseveration_items = [list(set([item for item in ls if ls.count(item) > 1])) for ls in l]
+        return (
+            [perseverationsList(i) for i in l]
+            if isinstance(l[0][0], list)
+            else [
+                list({item for item in ls if ls.count(item) > 1}) for ls in l
+            ]
+        )
     else:
-        perseveration_items = []
-    return perseveration_items
+        return []
 
 
 def perseverations(l):

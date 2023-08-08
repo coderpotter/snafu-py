@@ -92,13 +92,13 @@ def label_to_filepath(x, root_path, filetype):
             Detailed description here. Detailed description here.  Detailed 
             description here. 
     """
-    filedict=dict()
-    folder = root_path + "/" + filetype + "/"
+    filedict = {}
+    folder = f"{root_path}/{filetype}/"
 
     # since filenames are populated from directory listing there's no need to build a dict() anymore, but that's the way it's done still
     for filename in os.listdir(folder):
         if "csv" in filename:
-            label = filename[0:filename.find('.')].replace('_',' ')
+            label = filename[:filename.find('.')].replace('_', ' ')
             filedict[label] = folder + filename
     try:
         filename = filedict[x]
@@ -126,19 +126,16 @@ def data_properties(command, root_path):
         x_std = str(round(np.std(x),2))
         x_min = str(round(np.min(x),2))
         x_max = str(round(np.max(x),2))
-        
-        return x_mean + " (" + x_std + ") [" + x_min + " -- " + x_max + "]"
-    
+
+        return f"{x_mean} ({x_std}) [{x_min} -- {x_max}]"
+
     command = command['data_parameters']
-  
+
     if command['factor_type'] == "subject":
         subject = str(command['subject'])
         group = None
     elif command['factor_type'] == "group":
-        if command['group'] != "all":
-            group = command['group']
-        else:
-            group = None                             # reserved group label in GUI for all subjects
+        group = command['group'] if command['group'] != "all" else None
         subject = None
 
     filedata = load_fluency_data(command['fullpath'], category=command['category'], spell=label_to_filepath(command['spellfile'], root_path, "spellfiles"), group=group, subject=subject, hierarchical=True)
@@ -158,7 +155,7 @@ def data_properties(command, root_path):
     list_of_intrusions = []
     avg_num_perseverations = []
     list_of_perseverations = []
-   
+
     if not command['freq_ignore']:
         try:
             freq_sub = float(command['freq_sub'])
@@ -178,15 +175,15 @@ def data_properties(command, root_path):
 
     freqfile = label_to_filepath(command['freqfile'], root_path,"frequency")
     aoafile = label_to_filepath(command['aoafile'], root_path,"aoa")
-    
+
     preset_schemes = {"1 letter": 1,
                       "2 letters": 2,
                       "3 letters": 3}
-    if command['cluster_scheme'] in preset_schemes.keys():
+    if command['cluster_scheme'] in preset_schemes:
         schemefile = preset_schemes[command['cluster_scheme']]
     else:
         schemefile = label_to_filepath(command['cluster_scheme'], root_path, "schemes")
-    
+
     total_words = 0
     avg_word_freq = []
     word_freq_excluded = []
@@ -236,15 +233,15 @@ def data_properties(command, root_path):
         avg_unique_items_listed = format_output(avg_unique_items_listed)
         avg_word_freq=format_output(avg_word_freq)
         avg_word_aoa=format_output(avg_word_aoa)
- 
+
     word_freq_rate = 0
     for i in word_freq_excluded:
         word_freq_rate += len(i)
-    word_freq_rate = str(round(float(word_freq_rate)/total_words*100,2))+'%'
+    word_freq_rate = f'{str(round(float(word_freq_rate) / total_words * 100, 2))}%'
     word_aoa_rate = 0
     for i in word_aoa_excluded:
         word_aoa_rate += len(i)
-    word_aoa_rate = str(round(float(word_aoa_rate)/total_words*100,2))+'%'
+    word_aoa_rate = f'{str(round(float(word_aoa_rate) / total_words * 100, 2))}%'
     # fix
     csv_file = generate_csv_file(command, root_path)
 
@@ -295,7 +292,7 @@ def generate_csv_file(command, root_path):
             csv_listnum = listnum
             csv_numitems = len(filedata.Xs[subnum][listnum])
             csv_uniqueitem = len(set(filedata.Xs[subnum][listnum]))
-            
+
             # parameters should come from snafu gui (scheme, clustertype)
             csv_clusterlength = clusterSize(labeledXs, scheme=label_to_filepath(command['cluster_scheme'], root_path, "schemes"), clustertype=command['cluster_type'])
             csv_clusterswitch = clusterSwitch(labeledXs, scheme=label_to_filepath(command['cluster_scheme'], root_path, "schemes"), clustertype=command['cluster_type'])
@@ -309,7 +306,10 @@ def generate_csv_file(command, root_path):
             csv_freq = np.mean(csv_freq)
             csv_aoa = np.mean(csv_aoa)
 
-            csv_file += str(csv_sub)+','+str(csv_listnum)+','+str(csv_numitems)+','+str(csv_uniqueitem)+','+str(csv_clusterswitch)+','+str(round(csv_clusterlength,2))+','+str(csv_intrusions)+','+str(csv_perseverations)+','+str(round(csv_freq,2))+','+str(round(csv_aoa,2))+'\n'
+            csv_file += (
+                f'{str(csv_sub)},{str(csv_listnum)},{csv_numitems},{csv_uniqueitem},{str(csv_clusterswitch)},{str(round(csv_clusterlength, 2))},{str(csv_intrusions)},{str(csv_perseverations)},{str(round(csv_freq, 2))},{str(round(csv_aoa, 2))}'
+                + '\n'
+            )
 
     return csv_file
 
@@ -331,19 +331,12 @@ def network_properties(command, root_path):
     command = command['network_parameters']
 
     # U-INVITE won't work with perseverations
-    if command['network_method'] == "U-INVITE":
-        removePerseverations=True
-    else:
-        removePerseverations=False
-   
+    removePerseverations = command['network_method'] == "U-INVITE"
     if subj_props['factor_type'] == "subject":
         subject = str(subj_props['subject'])
         group = None
     elif subj_props['factor_type'] == "group":
-        if subj_props['group'] != "all":
-            group = subj_props['group']
-        else:
-            group = None                             # reserved group label in GUI for all subjects
+        group = subj_props['group'] if subj_props['group'] != "all" else None
         subject = None
 
     filedata = load_fluency_data(subj_props['fullpath'], category=subj_props['category'], spell=label_to_filepath(subj_props['spellfile'], root_path, "spellfiles"), removePerseverations=removePerseverations, subject=subject, group=group)
@@ -351,7 +344,7 @@ def network_properties(command, root_path):
     items = filedata.items
     irts = filedata.irts
     numnodes = filedata.numnodes
-    
+
     toydata=DataModel({
             'numx': len(Xs),
             'trim': 1,
@@ -372,18 +365,18 @@ def network_properties(command, root_path):
             'prune_limit': 100,
             'triangle_limit': 100,
             'other_limit': 100})
-   
+
     if command['prior']=="None":
         prior=None
     elif command['prior']=="USF":
         usf_file_path = "/snet/USF_animal_subset.snet"
         filename = root_path + usf_file_path
-        
+
         usf_graph, usf_items = read_graph(filename)
         usf_numnodes = len(usf_items)
         priordict = genGraphPrior([usf_graph], [usf_items], fitinfo=fitinfo)
         prior = (priordict, usf_items)
-        
+
     if command['network_method']=="Naive Random Walk":
         bestgraph = naiveRandomWalk(Xs, numnodes=numnodes)
     elif command['network_method']=="Community Network":
@@ -396,10 +389,10 @@ def network_properties(command, root_path):
         bestgraph = firstEdge(Xs, numnodes=numnodes)
     elif command['network_method']=="U-INVITE":
         bestgraph, ll = uinvite(Xs, toydata, numnodes=numnodes, fitinfo=fitinfo, debug=False, prior=prior)
-    
+
     nxg = nx.to_networkx_graph(bestgraph)
     nxg_json = jsonGraph(nxg, items)
-    
+
     return graph_properties(nxg,nxg_json)
 
 def analyze_graph(command, root_path): # used when importing graphs

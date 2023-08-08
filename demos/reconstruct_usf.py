@@ -67,8 +67,7 @@ with open('usf_reconstruction_results.csv','w') as fh:
         items = []          # individual participant index-label dictionaries
         startseed = seednum # random seed
 
-        for sub in range(numsubs):
-            
+        for _ in range(numsubs):
             # generate lists for each participant
             Xs = snafu.gen_lists(usf_graph_nx, toydata, seed=seednum)[0]
             data.append(Xs)
@@ -82,13 +81,13 @@ with open('usf_reconstruction_results.csv','w') as fh:
             ss_Xs, ss_items = snafu.groupToIndividual(Xs, usf_items)
             items.append(ss_items)
             data_hier.append(ss_Xs)
-            
+
             seednum += numlists         # increment random seed so we dont get the same lists next time
 
         for ssnum in range(1,len(data)+1):
             print(simnum, ssnum)
             flatdata = snafu.flatten_list(data[:ssnum])  # flatten list of lists as if they came from the same participant
-            
+
             # Generate Naive Random Walk graph from data
             if 'rw' in methods:
                 rw_graph = snafu.nrw(flatdata, usf_numnodes)
@@ -100,7 +99,7 @@ with open('usf_reconstruction_results.csv','w') as fh:
             # Generate Chan graph from data
             if 'chan' in methods:
                 chan_graph = snafu.chan(flatdata, usf_numnodes)
-            
+
             # Generate Kenett graph from data
             if 'kenett' in methods:
                 kenett_graph = snafu.kenett(flatdata, usf_numnodes)
@@ -108,15 +107,15 @@ with open('usf_reconstruction_results.csv','w') as fh:
             # Generate First Edge graph from data
             if 'fe' in methods:
                 fe_graph = snafu.firstEdge(flatdata, usf_numnodes)
-               
+
             # Generate non-hierarchical U-INVITE graph from data
             if 'uinvite_flat' in methods:
                 uinvite_flat_graph, ll = snafu.uinvite(flatdata, toydata, usf_numnodes, fitinfo=fitinfo)
-            
+
             # Generate hierarchical U-INVITE graph from data
             if 'uinvite_hierarchical' in methods:
                 uinvite_graphs, priordict = snafu.hierarchicalUinvite(data_hier[:ssnum], items[:ssnum], numnodes[:ssnum], toydata, fitinfo=fitinfo)
-                
+
                 # U-INVITE paper uses an added "threshold" such that at least 2 participants must have an edge for it to be in the group network
                 # So rather than using the same prior as the one used during fitting, we have to generate a new one
                 priordict = snafu.genGraphPrior(uinvite_graphs, items[:ssnum], fitinfo=fitinfo, mincount=2)
@@ -126,16 +125,23 @@ with open('usf_reconstruction_results.csv','w') as fh:
 
             # Write data to file!
             for method in methods:
-                if method=="rw": costlist = [snafu.costSDT(rw_graph, usf_graph), snafu.cost(rw_graph, usf_graph)]
-                if method=="goni": costlist = [snafu.costSDT(goni_graph, usf_graph), snafu.cost(goni_graph, usf_graph)]
-                if method=="chan": costlist = [snafu.costSDT(chan_graph, usf_graph), snafu.cost(chan_graph, usf_graph)]
-                if method=="kenett": costlist = [snafu.costSDT(kenett_graph, usf_graph), snafu.cost(kenett_graph, usf_graph)]
-                if method=="fe": costlist = [snafu.costSDT(fe_graph, usf_graph), snafu.cost(fe_graph, usf_graph)]
-                if method=="uinvite_flat": costlist = [snafu.costSDT(uinvite_flat_graph, usf_graph), snafu.cost(uinvite_flat_graph, usf_graph)]
-                if method=="uinvite_hierarchical": costlist = [snafu.costSDT(uinvite_group_graph, usf_graph), snafu.cost(uinvite_group_graph, usf_graph)]
+                if method == "chan":
+                    costlist = [snafu.costSDT(chan_graph, usf_graph), snafu.cost(chan_graph, usf_graph)]
+                elif method == "fe":
+                    costlist = [snafu.costSDT(fe_graph, usf_graph), snafu.cost(fe_graph, usf_graph)]
+                elif method == "goni":
+                    costlist = [snafu.costSDT(goni_graph, usf_graph), snafu.cost(goni_graph, usf_graph)]
+                elif method == "kenett":
+                    costlist = [snafu.costSDT(kenett_graph, usf_graph), snafu.cost(kenett_graph, usf_graph)]
+                elif method == "rw":
+                    costlist = [snafu.costSDT(rw_graph, usf_graph), snafu.cost(rw_graph, usf_graph)]
+                elif method == "uinvite_flat":
+                    costlist = [snafu.costSDT(uinvite_flat_graph, usf_graph), snafu.cost(uinvite_flat_graph, usf_graph)]
+                elif method == "uinvite_hierarchical":
+                    costlist = [snafu.costSDT(uinvite_group_graph, usf_graph), snafu.cost(uinvite_group_graph, usf_graph)]
                 costlist = snafu.flatten_list(costlist)
-                fh.write(method + "," + str(simnum) + "," + str(ssnum))
+                fh.write(f"{method},{str(simnum)},{str(ssnum)}")
                 for i in costlist:
-                    fh.write("," + str(i))
-                fh.write("," + str(startseed))
+                    fh.write(f",{str(i)}")
+                fh.write(f",{str(startseed)}")
                 fh.write('\n')

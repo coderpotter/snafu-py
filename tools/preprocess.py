@@ -6,6 +6,7 @@
 5. (optional) Install tqdm (pip install tqdm) for progress bars
 """
 
+
 import pandas, nltk, Levenshtein, tqdm
 
 CONCEPTNET_FILE_PATH = "/raid/datasets/conceptnet/conceptnet-assertions-5.7.0.csv" # use your own path
@@ -48,27 +49,26 @@ lemmatizer = nltk.stem.WordNetLemmatizer()
 # CREATING ANOTHER VERSION OF SNAFU_SAMPLE
 with open("temp/allWords-level2", "r") as f:
     allWords = eval(f.readline())
-fo = open("snafu_sample_cleaned.csv", "w+")
-fint = open("temp/changes.txt", "w+")
-typos = set()
-with open("../fluency_data/snafu_sample.csv", "r") as f:
-    fo.write(f.readline())
-    for line in tqdm.tqdm(f.readlines()):
-        line = line.split(",")
-        minLevenshtein, replaceWith = len(line[3]), line[3]
-        if line[3] not in allWords[line[2]]:
-            for word in allWords[line[2]]:
-                l = Levenshtein.distance(line[3], word)
-                if l < minLevenshtein:
-                    replaceWith = word
-                    minLevenshtein = l
-        new_word = lemmatizer.lemmatize(replaceWith).replace("_", " ")
-        if new_word != line[3]:
-            if line[3] not in typos:
-                fint.write(line[3] + "\t" + new_word + "\n")
-                typos.add(line[3])
-            line[3] = new_word
-        fo.write(",".join(line))
+with open("snafu_sample_cleaned.csv", "w+") as fo:
+    fint = open("temp/changes.txt", "w+")
+    typos = set()
+    with open("../fluency_data/snafu_sample.csv", "r") as f:
+        fo.write(f.readline())
+        for line in tqdm.tqdm(f.readlines()):
+            line = line.split(",")
+            minLevenshtein, replaceWith = len(line[3]), line[3]
+            if line[3] not in allWords[line[2]]:
+                for word in allWords[line[2]]:
+                    l = Levenshtein.distance(line[3], word)
+                    if l < minLevenshtein:
+                        replaceWith = word
+                        minLevenshtein = l
+            new_word = lemmatizer.lemmatize(replaceWith).replace("_", " ")
+            if new_word != line[3]:
+                if line[3] not in typos:
+                    fint.write(line[3] + "\t" + new_word + "\n")
+                    typos.add(line[3])
+                line[3] = new_word
+            fo.write(",".join(line))
 
-fo.close()
 fint.close()

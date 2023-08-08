@@ -26,11 +26,11 @@ for fluencylist in clusterlabels:
             continue
         curr_clusters = item.split(';')
         matching_clusters = list(set(prev_clusters) & set(curr_clusters))
-        if (len(matching_clusters) > 0) or (len(prev_clusters) == 0): # if no overlap, or if first item
+        if matching_clusters or len(prev_clusters) == 0: # if no overlap, or if first item
             switchlist.append(0)
         else:
             switchlist.append(1)
-        prev_clusters = curr_clusters 
+        prev_clusters = curr_clusters
     switchlists.append(switchlist)
 
 # write data to file

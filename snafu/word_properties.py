@@ -86,13 +86,12 @@ def wordStat(subj, missing=None, data=None):
         for j in i: # each word
             if (j in d_val): # word must be in the list
                 temp.append(d_val[j])
-            else: # or their would be excluded
-                if (missing!=None): # case 2: not in the list, substituted by missing
-                    temp.append(missing)
-                else:
-                    excluded.append(j)
-        if(len(temp)>0):
+            elif missing is None:
+                excluded.append(j)
+            else: # case 2: not in the list, substituted by missing
+                temp.append(missing)
+        if temp:
             word_val.append(np.mean(temp))
         words_excluded.append(excluded)
-    
+
     return word_val, words_excluded

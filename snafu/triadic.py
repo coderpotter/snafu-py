@@ -16,12 +16,8 @@ def commonNode(graph, items, node1, node2, numsims=100, jumpval=0.0):
             description here. 
     """
     import scipy.sparse as sp
-    
-    if sp.issparse(graph):
-        sparse=True
-    else:
-        sparse=False
-    
+
+    sparse = bool(sp.issparse(graph))
     def chooseRandomNeighbor(pos):
         if sparse:
             return np.random.choice(sp.find(graph[pos])[1])
@@ -37,21 +33,14 @@ def commonNode(graph, items, node1, node2, numsims=100, jumpval=0.0):
         a_hits=[]
         b_hits=[]
         intersect=[]
-        while len(intersect) == 0:
-            if np.random.random() < jumpval:
-                a_cur = a_idx
-            else:
-                a_cur = chooseRandomNeighbor(a_cur)
-            if np.random.random() < jumpval:
-                b_cur = b_idx
-            else:
-                b_cur = chooseRandomNeighbor(b_cur)
-            
+        while not intersect:
+            a_cur = a_idx if np.random.random() < jumpval else chooseRandomNeighbor(a_cur)
+            b_cur = b_idx if np.random.random() < jumpval else chooseRandomNeighbor(b_cur)
             if a_cur not in a_hits and a_cur not in idx:
                 a_hits.append(a_cur)
             if b_cur not in b_hits and b_cur not in idx:
                 b_hits.append(b_cur)
-            
+
             intersect = [val for val in a_hits if val in b_hits]
 
         incr_val = 1.0/len(intersect)
@@ -60,7 +49,7 @@ def commonNode(graph, items, node1, node2, numsims=100, jumpval=0.0):
                 common_items[items[i]] = incr_val
             else:
                 common_items[items[i]] += incr_val
-    
+
     for i in common_items:
         common_items[i] = common_items[i] / float(numsims)
 
@@ -123,11 +112,7 @@ def triadicMonteCarlo(graph, items, triad, numsims=100,jumpval=0.0):
     """
     import scipy.sparse as sp
 
-    if sp.issparse(graph):
-        sparse=True
-    else:
-        sparse=False
-    
+    sparse = bool(sp.issparse(graph))
     def chooseRandomNeighbor(pos):
         if sparse:
             return np.random.choice(sp.find(graph[pos])[1])
@@ -142,19 +127,9 @@ def triadicMonteCarlo(graph, items, triad, numsims=100,jumpval=0.0):
         c_idx = c_cur = inv_items[triad[2]]
         fin=0
         while fin==0:
-            if np.random.random() < jumpval:
-                a_cur = a_idx
-            else:
-                a_cur = chooseRandomNeighbor(a_cur)
-            if np.random.random() < jumpval:
-                b_cur = b_idx
-            else:
-                b_cur = chooseRandomNeighbor(b_cur)
-            if np.random.random() < jumpval:
-                c_cur = c_idx
-            else:
-                c_cur = chooseRandomNeighbor(c_cur)
-            
+            a_cur = a_idx if np.random.random() < jumpval else chooseRandomNeighbor(a_cur)
+            b_cur = b_idx if np.random.random() < jumpval else chooseRandomNeighbor(b_cur)
+            c_cur = c_idx if np.random.random() < jumpval else chooseRandomNeighbor(c_cur)
             # split wins
             numwins = 0
             if a_cur in [b_idx, c_idx]:
@@ -169,7 +144,7 @@ def triadicMonteCarlo(graph, items, triad, numsims=100,jumpval=0.0):
                 b_cur = b_idx
                 c_cur = c_idx
 
-            
+
             if a_cur == b_idx:
                 ab += 1.0
                 fin = 1
@@ -211,21 +186,21 @@ def similarity(a, items, start, choices, steps="inf", jumpval=0.0):
     x = x + [inv_items[start]] + choices_idx                                                # tack start state and absorbging states on the end
     x2=np.array(x)
     t2=t[x2[:,None],x2]                                                                       # re-arrange transition matrix to be in this order
-   
+
     # indices/length for convenience later
     numchoices=len(choices)
     nonchoicelength = len(a)-numchoices
     start_idx = nonchoicelength-1
     choice_idx = list(range(start_idx+1,len(x)))
-  
+
     # add jumps
     if jumpval > 0.0:
         t2 = t2 * (1.0-jumpval)
         t2[start_idx,:] = t2[start_idx,:] + jumpval        # + jumpval probability of transitioning to start node from any node
-  
+
     # separate into Q (btw non-absorbing) and R (non-absorbing to absorbing)
     Q=t2[:nonchoicelength,:nonchoicelength]
-    
+
     # compute absorbing probabilities
     if steps=="inf":
         # this can probably be made more efficient by using linalg instead of inv -- model after snafu.probX()
@@ -240,7 +215,7 @@ def similarity(a, items, start, choices, steps="inf", jumpval=0.0):
         probs=[]
         newQ=np.zeros(nonchoicelength)
         newQ[start_idx]=1.0
-        for stepnum in range(steps):
+        for _ in range(steps):
             ptmp=np.zeros(numchoices)
             for k in range(nonchoicelength):
                 num1=newQ[k]
@@ -251,7 +226,7 @@ def similarity(a, items, start, choices, steps="inf", jumpval=0.0):
             probs.append(ptmp)
     else:
         print("similarity() must take steps >=1 or 'inf'")
-    
+
     return probs
 
 def triadicComparison(graph, items, triad, steplimit=200, jumpval=0.0):
